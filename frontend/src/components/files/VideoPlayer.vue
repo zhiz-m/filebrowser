@@ -1,14 +1,8 @@
 <template>
   <video ref="videoPlayer" class="video-max video-js" controls preload="auto">
     <source />
-    <track
-      kind="subtitles"
-      v-for="(sub, index) in subtitles"
-      :key="index"
-      :src="sub"
-      :label="subLabel(sub)"
-      :default="index === 0"
-    />
+    <track kind="subtitles" v-for="(sub, index) in subtitles" :key="index" :src="sub" :label="subLabel(sub)"
+      :default="index === 0" />
     <p class="vjs-no-js">
       Sorry, your browser doesn't support embedded videos, but don't worry, you
       can <a :href="source">download it</a>
@@ -25,6 +19,7 @@ import "videojs-mobile-ui";
 import "videojs-hotkeys";
 import "video.js/dist/video-js.min.css";
 import "videojs-mobile-ui/dist/videojs-mobile-ui.css";
+import "videojs-sprite-thumbnails";
 
 const videoPlayer = ref<HTMLElement | null>(null);
 const player = ref<Player | null>(null);
@@ -47,7 +42,7 @@ nextTick(() => {
   initVideoPlayer();
 });
 
-onMounted(() => {});
+onMounted(() => { });
 
 onBeforeUnmount(() => {
   if (player.value) {
@@ -55,6 +50,23 @@ onBeforeUnmount(() => {
     player.value = null;
   }
 });
+
+function transformUrl(url: string) {
+  const PLACEHOLDER = "MaGicPlaceHolDER43"
+  const urlObj = new URL(url);
+  const pathParts = urlObj.pathname.split('/');
+
+  // Get the last element (the filename) and remove it from the path array
+  const fileName = pathParts.pop();
+
+  // Insert ".thumbnail" directory and add ".tmp" to the filename before rejoining
+  pathParts.push('.thumbnails', `${fileName}.${PLACEHOLDER}.jpeg`);
+
+  // Update the pathname with the modified path
+  urlObj.pathname = pathParts.join('/');
+
+  return urlObj.toString().replace(PLACEHOLDER, "{index}");
+}
 
 const initVideoPlayer = async () => {
   try {
@@ -74,7 +86,22 @@ const initVideoPlayer = async () => {
     // support for playback at different speeds.
     const playbackRatesOpt = { playbackRates: [0.5, 1, 1.5, 2, 2.5, 3] };
     let options = getOptions(props.options, langOpt, srcOpt, playbackRatesOpt);
-    player.value = videojs(videoPlayer.value!, options, () => {});
+    player.value = videojs(videoPlayer.value!, options, () => { });
+    let url = transformUrl(props.source);
+    console.log(url);
+    // @ts-ignore
+    player.value.spriteThumbnails({
+      interval: 10,
+      url,
+      idxTag(index: number) {
+        return `0000${index + 1}`.slice(-4);
+      },
+      width: 160,
+      height: 90,
+      columns: 5,
+      rows: 5
+    }).log.level("debug");
+    console.log(props.source);
 
     // TODO: need to test on mobile
     // @ts-ignore
@@ -98,9 +125,21 @@ const getOptions = (...srcOpt: any[]) => {
     plugins: {
       hotkeys: {
         volumeStep: 0.1,
-        seekStep: 10,
+        seekStep: 5,
         enableModifiersForNumbers: false,
+        forwardKey: function (event: KeyboardEvent, player: Player) {
+          return event.key === 'd' || event.key === '.';
+        },
+        rewindKey: function (event: KeyboardEvent, player: Player) {
+          return event.key === 'a' || event.key === ',';
+        },
       },
+      // spriteThumbnails: {
+      //   width: 160,
+      //   height: 90,
+      //   columns: 1,
+      //   rows: 1
+      // }
     },
   };
 

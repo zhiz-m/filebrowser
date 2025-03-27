@@ -47,6 +47,7 @@ export default defineConfig(({ command }) => {
       resolve,
       base: "",
       build: {
+        minify: false,
         rollupOptions: {
           input: {
             index: path.resolve(__dirname, "./public/index.html"),
